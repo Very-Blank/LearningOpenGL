@@ -1,0 +1,9 @@
+make your own image loader!
+
+
+nvim todo list:
+make a marco that comments out text!
+tab lenght shorter
+when adding () or {} it does the full thing not just single one
+relative line numbers so you can jump around easier
+change that the this counts as to words hello_this
