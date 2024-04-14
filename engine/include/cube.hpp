@@ -1,4 +1,5 @@
 #pragma once
+#include "glm/ext/matrix_float3x3.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/fwd.hpp"
 #include <glm/glm.hpp>
@@ -14,7 +15,8 @@ namespace engine {
 		public:
 		glm::vec3 position, scale;
 		glm::quat rotation;
-		glm::mat4 transform, normal_transform;
+		glm::mat4 model;
+		glm::mat3 normal_matrix;
 
 		Cube(glm::vec3 _position, glm::vec3 _scale, glm::quat _rotation);
 		Cube();

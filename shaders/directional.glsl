@@ -8,7 +8,7 @@ struct Material {
 };
 
 struct Light {
-    vec3 ambient, diffuse, specular, position;
+    vec3 ambient, diffuse, specular, direction;
 };
 
 in vec2 texture_coordinate;
@@ -26,7 +26,7 @@ uniform bool debug;
 void main() {
     //diffuse
     vec3 norm = normalize(normal);
-    vec3 light_dir = normalize(light.position - frag_position);
+    vec3 light_dir = normalize(-light.direction);
     float diff = max(dot(norm, light_dir), 0.0f);
     //specular
     vec3 view_dir = normalize(cam_position - frag_position);
@@ -42,8 +42,7 @@ void main() {
         result = diffuse + specular + ambient;
     }
     else {
-        result = (diffuse + specular + ambient) + color * diff;
+        result = (diffuse + specular + ambient) * 0.7 + color * 0.3;
     }
-
     frag_color = vec4(result, 1.0f);
 }

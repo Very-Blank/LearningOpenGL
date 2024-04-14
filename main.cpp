@@ -1,9 +1,10 @@
+#include "glm/fwd.hpp"
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <glad.h>
 #include <GLFW/glfw3.h>
 #include <numbers>
-#include <ostream>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include <glm/glm.hpp>
@@ -14,9 +15,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/common.hpp>
 
+//My header files
 #include <cube.hpp>
-#include <cstdlib>
-#include <ctime>
 
 glm::mat4 update_cam_transform(GLFWwindow *window, float &yaw, float &pitch, glm::vec3 &position, float &movement_speed);
 float available_rotation(float current, float input);
@@ -28,6 +28,33 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 
 int main(int argc, char const *argv[])
 {
+	enum Mode {normal, debug, lit_face_debug, line_debug};
+	enum FragmentShader {diffuse, directional};
+	Mode mode = Mode::normal;
+	FragmentShader fragment_shader_state = FragmentShader::diffuse;
+
+	for(int i = 0; i < argc; i++){
+		if(strcmp(argv[i], "-d") == 0){
+			mode = Mode::debug;
+			std::cout << "debug mode active" << std::endl;
+		}
+
+		else if (strcmp(argv[i], "-dl") == 0){
+			mode = Mode::line_debug;
+			std::cout << "line debug mode active" << std::endl;
+		}
+
+		else if (strcmp(argv[i], "-dlf") == 0){
+			mode = Mode::lit_face_debug;
+			std::cout << "line debug mode active" << std::endl;
+		}
+
+		else if (strcmp(argv[i], "-dir") == 0){
+			fragment_shader_state = FragmentShader::directional;
+			std::cout << "directional fragment shader active" << std::endl;
+		}
+	}
+
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
@@ -54,7 +81,7 @@ int main(int argc, char const *argv[])
 	
 	glViewport(0, 0, 800, 800);
 	glEnable(GL_DEPTH_TEST);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);	
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	//cube shaders
 	unsigned int vertex_shader;
@@ -78,7 +105,13 @@ int main(int argc, char const *argv[])
 
 	unsigned int fragment_shader;
 	fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	source = load_txt_file("../../shaders/fragment.glsl");
+	if(fragment_shader_state == FragmentShader::directional){
+		source = load_txt_file("../../shaders/directional.glsl");
+	}
+	else{
+		source = load_txt_file("../../shaders/fragment.glsl");
+	}
+
 	if (source == nullptr) {
 		glfwTerminate();
 		return -1;
@@ -157,37 +190,37 @@ int main(int argc, char const *argv[])
 		std::cout << "failed to link" << std::endl;
 	}
 
-float cube_vertices[] = {
+	float cube_vertices[] = {
 //             |      position      |  tex coord |    normals     |
-		-1.0f, -1.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, // Red face
-		1.0f, -1.0f,  1.0f, 1.0f, 0.0f,  0.0f, 0.0f, 1.0f,
-		1.0f,  1.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, 1.0f,
-		-1.0f,  1.0f,  1.0f, 0.0f, 1.0f,  0.0f, 0.0f, 1.0f,
+		-1.0f, -1.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, //Red
+		1.0f, -1.0f,  1.0f, 1.0f, 0.0f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+		1.0f,  1.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+		-1.0f,  1.0f,  1.0f, 0.0f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
 
-		-1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  0.0f, 0.0f, -1.0f, // Green face
-		1.0f, -1.0f, -1.0f, 1.0f, 0.0f,  0.0f, 0.0f, -1.0f,
-		1.0f,  1.0f, -1.0f, 1.0f, 1.0f,  0.0f, 0.0f, -1.0f,
-		-1.0f,  1.0f, -1.0f, 0.0f, 1.0f,  0.0f, 0.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, //Green
+		1.0f, -1.0f, -1.0f, 1.0f, 0.0f,  0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		1.0f,  1.0f, -1.0f, 1.0f, 1.0f,  0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+		-1.0f,  1.0f, -1.0f, 0.0f, 1.0f,  0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
 
-		-1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  -1.0f, 0.0f, 0.0f, // Blue face
-		-1.0f, -1.0f,  1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-		-1.0f,  1.0f,  1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f,
-		-1.0f,  1.0f, -1.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 0.0f,
+		-1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, //Blue
+		-1.0f, -1.0f,  1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+		-1.0f,  1.0f,  1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+		-1.0f,  1.0f, -1.0f, 0.0f, 1.0f,  -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
 
-		1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f, // Yellow face
-		1.0f, -1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-		1.0f,  1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-		1.0f,  1.0f, -1.0f, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f,
+		1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, //Yellow
+		1.0f, -1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+		1.0f,  1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+		1.0f,  1.0f, -1.0f, 0.0f, 1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
 
-		-1.0f,  1.0f,  1.0f,  0.0f, 0.0f, 0.0f, 1.0f, 0.0f, // Cyan face
-		1.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-		1.0f,  1.0f, -1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 
-		-1.0f,  1.0f, -1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+		-1.0f,  1.0f,  1.0f,  0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, //Cyan
+		1.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+		1.0f,  1.0f, -1.0f,  1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+		-1.0f,  1.0f, -1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
 
-		-1.0f, -1.0f,  1.0f,  0.0f, 0.0f, 0.0f, -1.0f, 0.0f, // Magneta face
-		1.0f, -1.0f,  1.0f,  1.0f, 0.0f, 0.0f, -1.0f, 0.0f,
-		1.0f, -1.0f, -1.0f,  1.0f, 1.0f, 0.0f, -1.0f, 0.0f,
-		-1.0f, -1.0f, -1.0f,  0.0f, 1.0f, 0.0f, -1.0f, 0.0f,
+		-1.0f, -1.0f,  1.0f,  0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, //Magenta
+		1.0f, -1.0f,  1.0f,  1.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+		1.0f, -1.0f, -1.0f,  1.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+		-1.0f, -1.0f, -1.0f,  0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
 	};
 	//data
 	float light_vertices[] = {
@@ -256,7 +289,7 @@ float cube_vertices[] = {
 	cube_transform = glm::translate(cube_transform, cube_position);
 	
 	//light transform stuff
-	glm::vec3 light_position(-5.0f, 4.0f, 2.0f);
+	glm::vec3 light_position(-15.0f, 4.0f, 2.0f);
 	glm::vec3 light_scale(0.25f, 0.25f, 0.25f);
 	glm::vec3 light_color(1.0f, 1.0f, 1.0f);
 	float ambient_light_strength = 0.5f;
@@ -289,14 +322,17 @@ float cube_vertices[] = {
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(5 * sizeof(float)));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(5 * sizeof(float)));
 	glEnableVertexAttribArray(2);
+
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float), (void*)(8 * sizeof(float)));
+	glEnableVertexAttribArray(3);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -371,20 +407,32 @@ float cube_vertices[] = {
 		std::cout << "Failed to load the image" << std::endl;
 	}
 
-	//line mode for debugging!
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	std::vector<engine::Cube> cube_list(5);
-	std::cout << cube_list.size() << std::endl;
+	glm::vec3 positions[] = {
+		glm::vec3(-1.832f, 6.539f, 2.804f),
+		glm::vec3(3.000f, 6.000f, -1.353f),
+		glm::vec3(-0.925f ,3.726f, 0.000f),
+		glm::vec3(0.922f, 8.499f, 0.339f),
+		glm::vec3(-3.627f,7.113f,-1.207f),
+	};
+
+	glm::vec3 rotations[] = {
+		glm::vec3(-std::numbers::pi/3.0f, std::numbers::pi, std::numbers::pi/5.0f),
+		glm::vec3(std::numbers::pi/2.5f, -std::numbers::pi/1.2f, std::numbers::pi/7.0f),
+		glm::vec3(std::numbers::pi/2.9, std::numbers::pi*2, -std::numbers::pi/9.0f),
+		glm::vec3(std::numbers::pi, -std::numbers::pi, std::numbers::pi/8.4f),
+		glm::vec3(std::numbers::pi/4.6, std::numbers::pi, -std::numbers::pi/4.32f),
+	};
+
 	for(int i = 0; i < cube_list.size(); i++){
-		srand(time(0) + i);
-		cube_list[i].position = glm::vec3((float)(rand()) / (float)(rand()), (float)(rand()) / (float)(rand()), (float)(rand()) / (float)(rand()));
-		std::cout << cube_list[i].position.x << " " << cube_list[i].position.y << " " <<  cube_list[i].position.z << std::endl;	
-		srand(time(0) + i);
-		cube_list[i].rotation = glm::quat(glm::vec3((float)(rand()) / (float)(rand()), (float)(rand()) / (float)(rand()), (float)(rand()) / (float)(rand())));
+		cube_list[i].position = positions[i];
+		cube_list[i].rotation = rotations[i];
 		cube_list[i].scale = glm::vec3(0.25f, 0.25f, 0.25f);
 		cube_list[i].Recalculate_transform();
 	}
 	
+	if(mode == Mode::line_debug)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	
 	while (!glfwWindowShouldClose(window)) {
 		process_input(window);
@@ -397,16 +445,26 @@ float cube_vertices[] = {
 			//set the transform
 			glUseProgram(cube_shader_program);
 			glUniform3fv(glGetUniformLocation(cube_shader_program, "a_cam_position"), 1, glm::value_ptr(cam_position));
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light_position));
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.ambient"), 1, glm::value_ptr(glm::vec3(0.6f, 0.6f, 0.6f)));
+
+			if(mode == Mode::debug || mode == Mode::line_debug)
+				glUniform1i(glGetUniformLocation(cube_shader_program, "debug"), true);
+			else
+				glUniform1i(glGetUniformLocation(cube_shader_program, "debug"), false);
+			
+
+			if(fragment_shader_state == FragmentShader::diffuse){
+				glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light_position));
+			}
+			else if (fragment_shader_state == FragmentShader::directional) {
+				glUniform3fv(glGetUniformLocation(cube_shader_program, "light.direction"), 1, glm::value_ptr(glm::vec3(0.0f, -1.0f, 0.0f)));
+			}
+
 			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.diffuse"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.ambient"), 1, glm::value_ptr(glm::vec3(0.6f, 0.6f, 0.6f)));
 			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.specular"), 1, glm::value_ptr(glm::vec3(4.0f, 4.0f, 4.0f)));
 	
-			glUniform1f(glGetUniformLocation(cube_shader_program, "material.shine"), 32.0f);
-	
-	
-			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "normal_transform"), 1, GL_FALSE, glm::value_ptr(cube_list[i].normal_transform));
-			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "transform"), 1, GL_FALSE, glm::value_ptr(cube_list[i].transform));
+			glUniformMatrix3fv(glGetUniformLocation(cube_shader_program, "normal_matrix"), 1, GL_FALSE, glm::value_ptr(cube_list[i].normal_matrix));
+			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "transform"), 1, GL_FALSE, glm::value_ptr(cube_list[i].model));
 			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 	
@@ -414,6 +472,7 @@ float cube_vertices[] = {
 			//this tells OpenGL to us this texture
 			glUniform1i(glGetUniformLocation(cube_shader_program, "material.diffuse"), 0);
 			glUniform1i(glGetUniformLocation(cube_shader_program, "material.specular"), 1);
+			glUniform1f(glGetUniformLocation(cube_shader_program, "material.shine"), 32.0f);
 	
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, diffuse_texture);
@@ -459,7 +518,9 @@ glm::mat4 update_cam_transform(GLFWwindow *window, float &yaw, float &pitch, glm
 
 		glm::quat rotation = qPitch * qYaw;
 		rotation = glm::normalize(rotation);
-		position += move_axis(window) * rotation * movement_speed;
+		glm::vec3 movement = move_axis(window);
+		position += glm::vec3(movement.x, 0.0f, movement.z) * rotation * movement_speed;
+		position.y += movement.y  * movement_speed;
 		return calculate_new_matrix(position, rotation);
 }
 
@@ -467,7 +528,7 @@ char* load_txt_file(const char* file_path){
 	std::ifstream file(file_path, std::ifstream::binary);
 	if(!file){
 		std::cout << "Problem with opening the file" << std::endl;
-		std::cout << "Path: " << file_path << std::endl;
+		std::cout << "File: " << file_path << std::endl;
 		return nullptr;
 	}
 
@@ -490,10 +551,11 @@ char* load_txt_file(const char* file_path){
 		}
 			
 		if (file) {
-			std::cout << "All charecters where read succefully" << std::endl;
+			std::cout << "File: " << file_path << " read successfully" << std::endl;
 		}
 		else {
 			std::cout << "Reading the whole file failed only: " << file.gcount() << " where read" << std::endl;
+			std::cout << "File: " << file_path << std::endl;
 		}
 
 		file.close();

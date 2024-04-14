@@ -1,1 +1,1 @@
-cd out/build ; make ; ./opengl
+cd out/build ; make ; ./opengl "$@"
