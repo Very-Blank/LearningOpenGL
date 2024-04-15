@@ -21,7 +21,10 @@ in vec3 color;
 uniform sampler2D image_texture; //if you add another one it would be GL_TEXTURE1
 uniform Material material;
 uniform Light light;
-uniform bool debug;
+uniform int mode;
+
+//All of the different modes
+//normal, debug, lit_face_debug, line_debug
 
 void main() {
     //diffuse
@@ -38,11 +41,18 @@ void main() {
     vec3 specular = light.specular * (spec * vec3(texture(material.specular, texture_coordinate)));
 
     vec3 result = vec3(1.0f);
-    if (!debug) {
-        result = diffuse + specular + ambient;
+
+    if (mode == 1) {
+        result = color;
+    }
+    else if (mode == 2) {
+        if (diff == 0)
+            result = (diffuse + specular + ambient) * 0.5f + color * 0.2;
+        else
+            result = (diffuse + specular + ambient) * 0.4f + color * diff;
     }
     else {
-        result = (diffuse + specular + ambient) + color * diff;
+        result = diffuse + specular + ambient;
     }
 
     frag_color = vec4(result, 1.0f);

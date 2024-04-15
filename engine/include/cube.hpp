@@ -20,6 +20,8 @@ namespace engine {
 
 		Cube(glm::vec3 _position, glm::vec3 _scale, glm::quat _rotation);
 		Cube();
-		void Recalculate_transform();
+		void Recalculate_matrices();
+		void Calculate_normal_matrix();
+		void Calculate_model_matrix();
 	};
 }

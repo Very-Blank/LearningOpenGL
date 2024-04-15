@@ -29,7 +29,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 int main(int argc, char const *argv[])
 {
 	enum Mode {normal, debug, lit_face_debug, line_debug};
-	enum FragmentShader {diffuse, directional};
+	enum FragmentShader {diffuse, directional, point_light};
 	Mode mode = Mode::normal;
 	FragmentShader fragment_shader_state = FragmentShader::diffuse;
 
@@ -46,12 +46,17 @@ int main(int argc, char const *argv[])
 
 		else if (strcmp(argv[i], "-dlf") == 0){
 			mode = Mode::lit_face_debug;
-			std::cout << "line debug mode active" << std::endl;
+			std::cout << "lit face debug mode active" << std::endl;
 		}
 
 		else if (strcmp(argv[i], "-dir") == 0){
 			fragment_shader_state = FragmentShader::directional;
 			std::cout << "directional fragment shader active" << std::endl;
+		}
+
+		else if (strcmp(argv[i], "-point") == 0){
+			fragment_shader_state = FragmentShader::point_light;
+			std::cout << "point light fragment shader active" << std::endl;
 		}
 	}
 
@@ -105,11 +110,16 @@ int main(int argc, char const *argv[])
 
 	unsigned int fragment_shader;
 	fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	if(fragment_shader_state == FragmentShader::directional){
+	switch (fragment_shader_state) {
+		case FragmentShader::directional:
 		source = load_txt_file("../../shaders/directional.glsl");
-	}
-	else{
-		source = load_txt_file("../../shaders/fragment.glsl");
+			break;
+		case FragmentShader::point_light:
+			source = load_txt_file("../../shaders/point_light.glsl");
+			break;
+		default:
+			source = load_txt_file("../../shaders/fragment.glsl");
+			break;
 	}
 
 	if (source == nullptr) {
@@ -264,32 +274,9 @@ int main(int argc, char const *argv[])
 		16, 17, 18, 16, 18, 19,
 		20, 21, 22, 20, 22, 23
 	};
-
-	//model transform stuff
-	glm::vec3 cube_position(0.0f, 0.0f, 5.0f);
-	glm::vec3 cube_scale(0.25f, 0.25f, 0.25f);
-	glm::quat cube_rotation = glm::quat(glm::vec3(0.0f, std::numbers::pi, 0.0f));
-	glm::mat4 cube_transform(1.0f);
-
-	glm::vec3 flip_scale(1.0f);
-	if(cube_scale.x < 0)
-		flip_scale.x = -1.0f;
-	if(cube_scale.y < 0)
-		flip_scale.y = -1.0f;
-	if(cube_scale.z < 0)
-		flip_scale.z = -1.0f;
-
-	glm::mat4 normal_transform(1.0f);
-	normal_transform = glm::scale(normal_transform, flip_scale);
-	normal_transform *= glm::toMat4(cube_rotation);
-
-	//combining everything into a matrix
-	cube_transform = glm::scale(cube_transform, cube_scale);
-	cube_transform *= glm::toMat4(cube_rotation);
-	cube_transform = glm::translate(cube_transform, cube_position);
 	
 	//light transform stuff
-	glm::vec3 light_position(-15.0f, 4.0f, 2.0f);
+	glm::vec3 light_position(-0.0f, 4.0f, 2.0f);
 	glm::vec3 light_scale(0.25f, 0.25f, 0.25f);
 	glm::vec3 light_color(1.0f, 1.0f, 1.0f);
 	float ambient_light_strength = 0.5f;
@@ -419,7 +406,7 @@ int main(int argc, char const *argv[])
 	glm::vec3 rotations[] = {
 		glm::vec3(-std::numbers::pi/3.0f, std::numbers::pi, std::numbers::pi/5.0f),
 		glm::vec3(std::numbers::pi/2.5f, -std::numbers::pi/1.2f, std::numbers::pi/7.0f),
-		glm::vec3(std::numbers::pi/2.9, std::numbers::pi*2, -std::numbers::pi/9.0f),
+		glm::vec3(std::numbers::pi/2.9f, std::numbers::pi*2.0f, -std::numbers::pi/9.0f),
 		glm::vec3(std::numbers::pi, -std::numbers::pi, std::numbers::pi/8.4f),
 		glm::vec3(std::numbers::pi/4.6, std::numbers::pi, -std::numbers::pi/4.32f),
 	};
@@ -428,7 +415,7 @@ int main(int argc, char const *argv[])
 		cube_list[i].position = positions[i];
 		cube_list[i].rotation = rotations[i];
 		cube_list[i].scale = glm::vec3(0.25f, 0.25f, 0.25f);
-		cube_list[i].Recalculate_transform();
+		cube_list[i].Recalculate_matrices();
 	}
 	
 	if(mode == Mode::line_debug)
@@ -446,25 +433,29 @@ int main(int argc, char const *argv[])
 			glUseProgram(cube_shader_program);
 			glUniform3fv(glGetUniformLocation(cube_shader_program, "a_cam_position"), 1, glm::value_ptr(cam_position));
 
-			if(mode == Mode::debug || mode == Mode::line_debug)
-				glUniform1i(glGetUniformLocation(cube_shader_program, "debug"), true);
-			else
-				glUniform1i(glGetUniformLocation(cube_shader_program, "debug"), false);
+			glUniform1i(glGetUniformLocation(cube_shader_program, "mode"), mode);
 			
-
-			if(fragment_shader_state == FragmentShader::diffuse){
-				glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light_position));
+			switch (fragment_shader_state) {
+				case FragmentShader::diffuse:
+					glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light_position));
+					break;
+				case FragmentShader::directional:
+					glUniform3fv(glGetUniformLocation(cube_shader_program, "light.direction"), 1, glm::value_ptr(glm::vec3(0.0f, -1.0f, 0.0f)));
+					break;
+				case FragmentShader::point_light:
+					glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light_position));
+					glUniform1f(glGetUniformLocation(cube_shader_program, "light.constant"), 1.0f);
+					glUniform1f(glGetUniformLocation(cube_shader_program, "light.linear"), 0.35f);
+					glUniform1f(glGetUniformLocation(cube_shader_program, "light.quadratic"), 0.44f);
+					break;
 			}
-			else if (fragment_shader_state == FragmentShader::directional) {
-				glUniform3fv(glGetUniformLocation(cube_shader_program, "light.direction"), 1, glm::value_ptr(glm::vec3(0.0f, -1.0f, 0.0f)));
-			}
 
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.diffuse"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.ambient"), 1, glm::value_ptr(glm::vec3(0.6f, 0.6f, 0.6f)));
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.specular"), 1, glm::value_ptr(glm::vec3(4.0f, 4.0f, 4.0f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.diffuse"), 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.ambient"), 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.specular"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
 	
 			glUniformMatrix3fv(glGetUniformLocation(cube_shader_program, "normal_matrix"), 1, GL_FALSE, glm::value_ptr(cube_list[i].normal_matrix));
-			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "transform"), 1, GL_FALSE, glm::value_ptr(cube_list[i].model));
+			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "model"), 1, GL_FALSE, glm::value_ptr(cube_list[i].model));
 			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 	
