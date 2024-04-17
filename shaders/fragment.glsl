@@ -7,9 +7,13 @@ struct Material {
     float shine;
 };
 
-struct Light {
+struct Directional_light {
     vec3 ambient, diffuse, specular, position;
 };
+
+struct Point_light {};
+
+struct Flash_light {};
 
 in vec2 texture_coordinate;
 in vec3 normal;
@@ -30,7 +34,7 @@ void main() {
     //diffuse
     vec3 norm = normalize(normal);
     vec3 light_dir = normalize(light.position - frag_position);
-    float diff = max(dot(norm, light_dir), 0.0f);
+    float diff = max(dot(light_dir, norm), 0.0f) * 1.5f;
     //specular
     vec3 view_dir = normalize(cam_position - frag_position);
     vec3 reflect_dir = reflect(-light_dir, norm);
@@ -46,10 +50,10 @@ void main() {
         result = color;
     }
     else if (mode == 2) {
-        if (diff == 0)
-            result = (diffuse + specular + ambient) * 0.5f + color * 0.2;
+        if (diff > 0)
+            result = color;
         else
-            result = (diffuse + specular + ambient) * 0.4f + color * diff;
+            result = (diffuse + specular + ambient) * 0.5f + color * 0.05;
     }
     else {
         result = diffuse + specular + ambient;

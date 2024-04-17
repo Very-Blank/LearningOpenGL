@@ -11,17 +11,18 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+out vec3 frag_position;
 out vec2 texture_coordinate;
 out vec3 normal;
-out vec3 frag_position;
 out vec3 cam_position;
 out vec3 color;
 
 void main() {
-    gl_Position = projection * view * model * vec4(a_pos, 1.0f);
+    frag_position = vec3(model * vec4(a_pos, 1.0f));
     texture_coordinate = a_texture_coordinate;
     normal = normal_matrix * a_normal;
-    frag_position = vec3(model * vec4(a_pos, 1.0f));
     cam_position = a_cam_position;
     color = a_color;
+
+    gl_Position = projection * view * model * vec4(a_pos, 1.0f);
 }

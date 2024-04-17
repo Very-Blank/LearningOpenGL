@@ -1,4 +1,3 @@
-#include "glm/fwd.hpp"
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -17,21 +16,19 @@
 
 //My header files
 #include <cube.hpp>
+#include <camera.hpp>
 
-glm::mat4 update_cam_transform(GLFWwindow *window, float &yaw, float &pitch, glm::vec3 &position, float &movement_speed);
-float available_rotation(float current, float input);
-glm::mat4 calculate_new_matrix(glm::vec3 position, glm::quat rotation);
-glm::vec3 move_axis(GLFWwindow *window);
 char* load_txt_file(const char* file_path);
 void process_input(GLFWwindow *window);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 
+const int WINDOW_HEIGHT = 800;
+const int WINDOW_WIDTH = 800;
+
 int main(int argc, char const *argv[])
 {
 	enum Mode {normal, debug, lit_face_debug, line_debug};
-	enum FragmentShader {diffuse, directional, point_light};
 	Mode mode = Mode::normal;
-	FragmentShader fragment_shader_state = FragmentShader::diffuse;
 
 	for(int i = 0; i < argc; i++){
 		if(strcmp(argv[i], "-d") == 0){
@@ -40,23 +37,10 @@ int main(int argc, char const *argv[])
 		}
 
 		else if (strcmp(argv[i], "-dl") == 0){
-			mode = Mode::line_debug;
-			std::cout << "line debug mode active" << std::endl;
-		}
-
+			mode = Mode::line_debug; std::cout << "line debug mode active" << std::endl; }
 		else if (strcmp(argv[i], "-dlf") == 0){
 			mode = Mode::lit_face_debug;
 			std::cout << "lit face debug mode active" << std::endl;
-		}
-
-		else if (strcmp(argv[i], "-dir") == 0){
-			fragment_shader_state = FragmentShader::directional;
-			std::cout << "directional fragment shader active" << std::endl;
-		}
-
-		else if (strcmp(argv[i], "-point") == 0){
-			fragment_shader_state = FragmentShader::point_light;
-			std::cout << "point light fragment shader active" << std::endl;
 		}
 	}
 
@@ -65,7 +49,7 @@ int main(int argc, char const *argv[])
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	
-	GLFWwindow *window = glfwCreateWindow(800, 800, "LearnOpenGL", NULL, NULL);
+	GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_WIDTH, "LearnOpenGL", NULL, NULL);
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -110,17 +94,7 @@ int main(int argc, char const *argv[])
 
 	unsigned int fragment_shader;
 	fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	switch (fragment_shader_state) {
-		case FragmentShader::directional:
-		source = load_txt_file("../../shaders/directional.glsl");
-			break;
-		case FragmentShader::point_light:
-			source = load_txt_file("../../shaders/point_light.glsl");
-			break;
-		default:
-			source = load_txt_file("../../shaders/fragment.glsl");
-			break;
-	}
+	source = load_txt_file("../../shaders/fragment.glsl");
 
 	if (source == nullptr) {
 		glfwTerminate();
@@ -275,29 +249,6 @@ int main(int argc, char const *argv[])
 		20, 21, 22, 20, 22, 23
 	};
 	
-	//light transform stuff
-	glm::vec3 light_position(-0.0f, 4.0f, 2.0f);
-	glm::vec3 light_scale(0.25f, 0.25f, 0.25f);
-	glm::vec3 light_color(1.0f, 1.0f, 1.0f);
-	float ambient_light_strength = 0.5f;
-	glm::quat light_rotation = glm::quat(glm::vec3(0.0f, 0.0f, 0.0f));
-	glm::mat4 light_transform(1.0f);
-
-	//combining everything into a matrix
-	light_transform = glm::scale(light_transform, light_scale);
-	light_transform *= glm::toMat4(light_rotation);
-	light_transform = glm::translate(light_transform, light_position);
-
-	//camera
-	float cam_move_speed = 0.02f;
-	glm::vec3 cam_position(0.0f, 0.0f, 5.0f);
-	float cam_yaw, cam_pitch = 0.0f;
-	glm::mat4 view(1.0f);
-	//view *= glm::toMat4(rotation);
-	view = glm::translate(view, -cam_position);
-	glm::mat4 projection = glm::perspective(glm::radians(90.0f) , 800.0f/800.0f, 0.01f, 1000.0f);
-	
-
 	//buffers for cube
 	unsigned int VBO, VAO, EBO;
 	glGenVertexArrays(1, &VAO);
@@ -394,6 +345,13 @@ int main(int argc, char const *argv[])
 		std::cout << "Failed to load the image" << std::endl;
 	}
 
+
+	//camera
+	engine::Camera camera(90.0f, 0.001f, 0.01f, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+	engine::Cube light(glm::vec3(11.0f, 4.0f, 0.0f), glm::vec3(0.25f, 0.25f, 0.25f), glm::vec3(0.0f, 0.0f, 0.0f));
+	light.Calculate_model_matrix();
+
 	std::vector<engine::Cube> cube_list(5);
 	glm::vec3 positions[] = {
 		glm::vec3(-1.832f, 6.539f, 2.804f),
@@ -423,7 +381,7 @@ int main(int argc, char const *argv[])
 	
 	while (!glfwWindowShouldClose(window)) {
 		process_input(window);
-		view = update_cam_transform(window, cam_yaw, cam_pitch, cam_position, cam_move_speed); 
+		camera.Update_camera(window);
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -431,33 +389,18 @@ int main(int argc, char const *argv[])
 		for(int i = 0; i < cube_list.size(); i++){
 			//set the transform
 			glUseProgram(cube_shader_program);
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "a_cam_position"), 1, glm::value_ptr(cam_position));
-
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "a_cam_position"), 1, glm::value_ptr(camera.position));
 			glUniform1i(glGetUniformLocation(cube_shader_program, "mode"), mode);
-			
-			switch (fragment_shader_state) {
-				case FragmentShader::diffuse:
-					glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light_position));
-					break;
-				case FragmentShader::directional:
-					glUniform3fv(glGetUniformLocation(cube_shader_program, "light.direction"), 1, glm::value_ptr(glm::vec3(0.0f, -1.0f, 0.0f)));
-					break;
-				case FragmentShader::point_light:
-					glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light_position));
-					glUniform1f(glGetUniformLocation(cube_shader_program, "light.constant"), 1.0f);
-					glUniform1f(glGetUniformLocation(cube_shader_program, "light.linear"), 0.35f);
-					glUniform1f(glGetUniformLocation(cube_shader_program, "light.quadratic"), 0.44f);
-					break;
-			}
 
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.diffuse"), 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light.position));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.diffuse"), 1, glm::value_ptr(glm::vec3(0.7f, 0.7f, 0.7f)));
 			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.ambient"), 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
 			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.specular"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
 	
 			glUniformMatrix3fv(glGetUniformLocation(cube_shader_program, "normal_matrix"), 1, GL_FALSE, glm::value_ptr(cube_list[i].normal_matrix));
 			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "model"), 1, GL_FALSE, glm::value_ptr(cube_list[i].model));
-			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(camera.view));
+			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(camera.projection));
 	
 			//cube rendering
 			//this tells OpenGL to us this texture
@@ -475,14 +418,14 @@ int main(int argc, char const *argv[])
 			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		}
 
-		//light rendering
 		glUseProgram(light_shader_program);
-		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "transform"), 1, GL_FALSE, glm::value_ptr(light_transform));
-		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
+		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "transform"), 1, GL_FALSE, glm::value_ptr(light.model));
+		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(camera.view));
+		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(camera.projection));
+	
 		glBindVertexArray(LVAO);
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -495,24 +438,6 @@ int main(int argc, char const *argv[])
 	glfwTerminate();
 
 	return 0;
-}
-
-glm::mat4 update_cam_transform(GLFWwindow *window, float &yaw, float &pitch, glm::vec3 &position, float &movement_speed){
-		double x_pos, y_pos;
-		glfwGetCursorPos(window, &x_pos, &y_pos);
-		glfwSetCursorPos(window, 0.0f, 0.0f);
-
-		yaw += x_pos * 0.001f;
-		pitch = glm::clamp(pitch + (static_cast<float>(y_pos) * 0.001f), -static_cast<float>(std::numbers::pi)/2.0f, static_cast<float>(std::numbers::pi)/2.0f);
-		glm::quat qPitch = glm::angleAxis(pitch, glm::vec3(1, 0, 0));
-		glm::quat qYaw = glm::angleAxis(yaw, glm::vec3(0, 1, 0));
-
-		glm::quat rotation = qPitch * qYaw;
-		rotation = glm::normalize(rotation);
-		glm::vec3 movement = move_axis(window);
-		position += glm::vec3(movement.x, 0.0f, movement.z) * rotation * movement_speed;
-		position.y += movement.y  * movement_speed;
-		return calculate_new_matrix(position, rotation);
 }
 
 char* load_txt_file(const char* file_path){
@@ -567,41 +492,6 @@ void process_input(GLFWwindow *window){
 		glfwSetWindowShouldClose(window, true);
 	}
 }
-
-glm::mat4 calculate_new_matrix(glm::vec3 position, glm::quat rotation){
-	glm::mat4 matrix(1.0f);
-	matrix *= glm::toMat4(rotation);
-	matrix = glm::translate(matrix, -position);
-	return matrix;
-}
-
-glm::vec3 move_axis(GLFWwindow *window){
-	glm::vec3 axis(0.0f);
-	//axis
-	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-		axis.z -= 1.0f;
-	}
-
-	if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-		axis.z += 1.0f;
-	}
-
-	if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-		axis.x += 1.0f;
-	}
-
-	if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-		axis.x -= 1.0f;
-	}
-
-	//up
-	if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
-		axis.y += 1.0f;
-	}
-
-	return axis;
-}
-
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height){
 	glViewport(0, 0, width, height);
