@@ -1,5 +1,4 @@
 #pragma once
-#include "glm/fwd.hpp"
 #include <GLFW/glfw3.h>
 #include <numbers>
 #define STB_IMAGE_IMPLEMENTATION
@@ -10,7 +9,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/common.hpp>
-#include <iostream>
 
 namespace engine {
 	class Camera{

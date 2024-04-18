@@ -8,12 +8,20 @@ struct Material {
 };
 
 struct Directional_light {
-    vec3 ambient, diffuse, specular, position;
+    vec3 ambient, diffuse, specular, direction;
+    bool active;
 };
 
-struct Point_light {};
+struct Point_light {
+    vec3 ambient, diffuse, specular, position;
+    bool active;
+};
 
-struct Flash_light {};
+struct Flash_light {
+    vec3 ambient, diffuse, specular;
+    float max_angle;
+    bool active;
+};
 
 in vec2 texture_coordinate;
 in vec3 normal;
@@ -24,11 +32,19 @@ in vec3 color;
 //this is GL_TEXTURE0
 uniform sampler2D image_texture; //if you add another one it would be GL_TEXTURE1
 uniform Material material;
-uniform Light light;
+uniform Point_light light;
+#define MAX_POINT_LIGHTS = 5;
+uniform Point_light point_lights[MAX_POINT_LIGHTS];
+#define MAX_DIRECTIONAL_LIGHTS = 1;
+uniform Directional_light point_lights[MAX_DIRECTIONAL_LIGHTS];
 uniform int mode;
 
-//All of the different modes
+//All of the different modes starts from 0
 //normal, debug, lit_face_debug, line_debug
+
+vec3 Directional_light_calc();
+vec3 Point_light_calc();
+vec3 Flash_light_calc();
 
 void main() {
     //diffuse
