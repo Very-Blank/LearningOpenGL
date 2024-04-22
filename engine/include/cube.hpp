@@ -1,7 +1,4 @@
 #pragma once
-#include "glm/ext/matrix_float3x3.hpp"
-#include "glm/ext/matrix_float4x4.hpp"
-#include "glm/fwd.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #define GLM_ENABLE_EXPERIMENTAL

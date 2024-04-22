@@ -1,6 +1,3 @@
-#include "glm/ext/matrix_float3x3.hpp"
-#include "glm/fwd.hpp"
-#include "glm/matrix.hpp"
 #include <cube.hpp>
 namespace engine {
 		Cube::Cube(glm::vec3 _position, glm::vec3 _scale, glm::quat _rotation) : position(_position), scale(_scale), rotation(_rotation){

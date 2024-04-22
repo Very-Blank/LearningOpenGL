@@ -1,9 +1,12 @@
-#include <cstring>
+#include <cmath>
+#include <string>
 #include <fstream>
 #include <iostream>
 #include <glad.h>
 #include <GLFW/glfw3.h>
 #include <numbers>
+#include <string>
+#include <vector>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #include <glm/glm.hpp>
@@ -17,7 +20,10 @@
 //My header files
 #include <cube.hpp>
 #include <camera.hpp>
+#include "flash_light.hpp"
 
+float quadratic(float distance);
+float linear(float distance);
 char* load_txt_file(const char* file_path);
 void process_input(GLFWwindow *window);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -88,6 +94,10 @@ int main(int argc, char const *argv[])
 	glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &compile_status);
 	if (!compile_status) {
 		std::cout << "failed to compile vertex shader" << std::endl;
+		char info[512];
+		glGetShaderInfoLog(vertex_shader, 512, NULL, info);
+		std::cout << "failed to compile fragment shader" << std::endl;
+		std::cout << "info: " << info << std::endl;
 	}
 	delete[] source;
 	source = nullptr;
@@ -107,6 +117,9 @@ int main(int argc, char const *argv[])
 	glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &compile_status);
 	if (!compile_status) {
 		std::cout << "failed to compile fragment shader" << std::endl;
+		char info[512];
+		glGetShaderInfoLog(fragment_shader, 512, NULL, info);
+		std::cout << "info: " << info << std::endl;
 	}
 	delete[] source;
 	source = nullptr;
@@ -139,6 +152,9 @@ int main(int argc, char const *argv[])
 	glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &compile_status);
 	if (!compile_status) {
 		std::cout << "failed to compile vertex shader" << std::endl;
+		char info[512];
+		glGetShaderInfoLog(vertex_shader, 512, NULL, info);
+		std::cout << "info: " << info << std::endl;
 	}
 	delete[] source;
 	source = nullptr;
@@ -156,6 +172,9 @@ int main(int argc, char const *argv[])
 	glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &compile_status);
 	if (!compile_status) {
 		std::cout << "failed to compile fragment shader" << std::endl;
+		char info[512];
+		glGetShaderInfoLog(fragment_shader, 512, NULL, info);
+		std::cout << "info: " << info << std::endl;
 	}
 	delete[] source;
 	source = nullptr;
@@ -345,13 +364,39 @@ int main(int argc, char const *argv[])
 		std::cout << "Failed to load the image" << std::endl;
 	}
 
-
 	//camera
 	engine::Camera camera(90.0f, 0.001f, 0.01f, WINDOW_WIDTH, WINDOW_HEIGHT);
-
+	//lights
 	engine::Cube light(glm::vec3(11.0f, 4.0f, 0.0f), glm::vec3(0.25f, 0.25f, 0.25f), glm::vec3(0.0f, 0.0f, 0.0f));
-	light.Calculate_model_matrix();
+	engine::Flash_light flash_light(glm::vec3(11.0f, 4.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.25f, 0.25f, 0.25f), glm::vec3(0.0f, 0.0f, 0.0f));
+	std::vector<engine::Cube> lights(5);
+	glm::vec3 spotlight_positions [] = {
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(7.0f, 3.0f, 0.0f),
+		glm::vec3(-16.0f, 5.0f, 2.0f),
+		glm::vec3(-7.0f, -9.0f, -5.0f),
+		glm::vec3(8.0f, 5.0f, 9.0f),
+	};
 
+	for (int i = 0; i < lights.size(); i++) {
+		lights[i].position = spotlight_positions[i];
+		lights[i].scale = glm::vec3(0.25f, 0.25f, 0.25f);
+		lights[i].Calculate_model_matrix();
+	}
+
+	float spotlight_strenghts[] = {
+		70.0f, 95.0f, 54.5f, 100.0f, 80.0f,
+	};
+
+	glm::vec3 light_colors[] = {
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(1.0f, 1.0f, 0.0f), 
+		glm::vec3(0.0f, 0.0f, 1.0f), 
+		glm::vec3(0.0f, 1.0f, 1.0f), 
+		glm::vec3(1.0f, 0.0f, 1.0f)
+	};
+
+	//cubes
 	std::vector<engine::Cube> cube_list(5);
 	glm::vec3 positions[] = {
 		glm::vec3(-1.832f, 6.539f, 2.804f),
@@ -386,17 +431,32 @@ int main(int argc, char const *argv[])
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
+		glUseProgram(cube_shader_program);
+
 		for(int i = 0; i < cube_list.size(); i++){
 			//set the transform
-			glUseProgram(cube_shader_program);
 			glUniform3fv(glGetUniformLocation(cube_shader_program, "a_cam_position"), 1, glm::value_ptr(camera.position));
-			glUniform1i(glGetUniformLocation(cube_shader_program, "mode"), mode);
+			//glUniform1i(glGetUniformLocation(cube_shader_program, "mode"), mode);
 
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.position"), 1, glm::value_ptr(light.position));
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.diffuse"), 1, glm::value_ptr(glm::vec3(0.7f, 0.7f, 0.7f)));
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.ambient"), 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
-			glUniform3fv(glGetUniformLocation(cube_shader_program, "light.specular"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
-	
+			for(int i = 0; i < 5; i++){
+				std::string light_string = "point_lights[" + std::to_string(i) + "].";
+				glUniform1i(glGetUniformLocation(cube_shader_program, (light_string + "on").c_str()), true);
+				glUniform1f(glGetUniformLocation(cube_shader_program, (light_string + "linear").c_str()), linear(spotlight_strenghts[i]));
+				glUniform1f(glGetUniformLocation(cube_shader_program, (light_string + "quadratic").c_str()), quadratic(spotlight_strenghts[i]));
+				glUniform3fv(glGetUniformLocation(cube_shader_program, (light_string + "position").c_str()), 1, glm::value_ptr(lights[i].position));
+				glUniform3fv(glGetUniformLocation(cube_shader_program, (light_string + "color").c_str()), 1, glm::value_ptr(light_colors[i]));
+
+				glUniform3fv(glGetUniformLocation(cube_shader_program, (light_string + "diffuse").c_str()), 1, glm::value_ptr(glm::vec3(0.7f, 0.7f, 0.7f)));
+				glUniform3fv(glGetUniformLocation(cube_shader_program, (light_string + "ambient").c_str()), 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
+				glUniform3fv(glGetUniformLocation(cube_shader_program, (light_string + "specular").c_str()), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+			}
+
+			glUniform1i(glGetUniformLocation(cube_shader_program, "directional_lights[0].on"), true);
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "directional_lights[0].direction"), 1, glm::value_ptr(glm::vec3(0.0f, -1.0f, 0.0f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "directional_lights[0].diffuse"), 1, glm::value_ptr(glm::vec3(0.7f, 0.7f, 0.7f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "directional_lights[0].ambient"), 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.2f)));
+			glUniform3fv(glGetUniformLocation(cube_shader_program, "directional_lights[0].specular"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+
 			glUniformMatrix3fv(glGetUniformLocation(cube_shader_program, "normal_matrix"), 1, GL_FALSE, glm::value_ptr(cube_list[i].normal_matrix));
 			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "model"), 1, GL_FALSE, glm::value_ptr(cube_list[i].model));
 			glUniformMatrix4fv(glGetUniformLocation(cube_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(camera.view));
@@ -419,12 +479,15 @@ int main(int argc, char const *argv[])
 		}
 
 		glUseProgram(light_shader_program);
-		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "transform"), 1, GL_FALSE, glm::value_ptr(light.model));
-		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(camera.view));
-		glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(camera.projection));
-	
-		glBindVertexArray(LVAO);
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		for(int i = 0; i < lights.size(); i++){
+			glUniform3fv(glGetUniformLocation(light_shader_program, "color"), 1, glm::value_ptr(light_colors[i]));
+			glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "transform"), 1, GL_FALSE, glm::value_ptr(lights[i].model));
+			glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "view"), 1, GL_FALSE, glm::value_ptr(camera.view));
+			glUniformMatrix4fv(glGetUniformLocation(light_shader_program, "projection"), 1, GL_FALSE, glm::value_ptr(camera.projection));
+		
+			glBindVertexArray(LVAO);
+			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		}
 	
 
 		glfwSwapBuffers(window);
@@ -438,6 +501,18 @@ int main(int argc, char const *argv[])
 	glfwTerminate();
 
 	return 0;
+}
+
+float quadratic(float distance){
+	if(distance < 10.0f)
+		distance = 10.0f;
+	return 82.4448f * pow(distance, -2.0192f);
+}
+
+float linear(float distance){
+	if(distance < 10.0f)
+		distance = 10.0f;
+	return 4.6905f * pow(distance, -1.0097f);
 }
 
 char* load_txt_file(const char* file_path){

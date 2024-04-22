@@ -54,7 +54,7 @@ namespace engine {
 		}
 
 		//down
-		if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS){
+		if(glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS){
 			axis.y += -1.0f;
 		}
 	
